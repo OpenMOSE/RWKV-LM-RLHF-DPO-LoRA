@@ -75,7 +75,7 @@ if __name__ == "__main__":
 
     ########################################################## add dpo
     parser.add_argument("--dpo", default=1, type=int)
-    parser.add_argument("--dpo_train_file", default="testset.save", type=str)
+    parser.add_argument("--dpo_train_file", default="trainset.save", type=str)
     parser.add_argument("--dpo_beta", default=0.01, type=float)
     parser.add_argument("--dpo_general_corpus_ratio", default=0, type=float)
     # parser.add_argument("--dpo_eval_file", default="validset.save", type=str)
