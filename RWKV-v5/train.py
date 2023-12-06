@@ -73,6 +73,13 @@ if __name__ == "__main__":
     parser.add_argument("--my_exit", default=99999999, type=int)
     parser.add_argument("--my_exit_tokens", default=0, type=int)
 
+    ########################################################## add dpo
+    parser.add_argument("--dpo", default=1, type=int)
+    parser.add_argument("--dpo_train_file", default="testset.save", type=str)
+    parser.add_argument("--dpo_beta", default=0.01, type=float)
+    parser.add_argument("--dpo_general_corpus_ratio", default=0, type=float)
+    # parser.add_argument("--dpo_eval_file", default="validset.save", type=str)
+    
     if pl.__version__[0]=='2':
         parser.add_argument("--accelerator", default="gpu", type=str)
         parser.add_argument("--strategy", default="auto", type=str)
@@ -242,7 +249,9 @@ if __name__ == "__main__":
 
     from src.trainer import train_callback, generate_init_weight
     from src.dataset import MyDataset
-
+    from src.dpodataset import DPODataset
+    if args.dpo:
+        dpo_train_data = DPODataset(args)
     train_data = MyDataset(args)
     args.vocab_size = train_data.vocab_size
 
@@ -307,4 +316,12 @@ if __name__ == "__main__":
     # must set shuffle=False, persistent_workers=False (because worker is in another thread)
     data_loader = DataLoader(train_data, shuffle=False, pin_memory=True, batch_size=args.micro_bsz, num_workers=1, persistent_workers=False, drop_last=True)
 
-    trainer.fit(model, data_loader)
+    ########################################################## add dpo
+    if args.dpo: 
+        from pytorch_lightning.trainer.supporters import CombinedLoader
+        dpo_loader = DataLoader(dpo_train_data, shuffle=False, pin_memory=True, batch_size=args.micro_bsz, num_workers=1, persistent_workers=False, drop_last=True, collate_fn=lambda x:x)
+        combined_loader = CombinedLoader([data_loader, dpo_loader], "min_size")
+        trainer.fit(model, combined_loader)
+    else:
+        trainer.fit(model, data_loader)
+
