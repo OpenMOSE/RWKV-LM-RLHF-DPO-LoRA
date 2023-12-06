@@ -671,6 +671,34 @@ class RWKV(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         args = self.args
+
+
+        ################################################################################################################# add dpo
+        if args.dpo:
+            batch_general, batch_dpo = batch
+            idx, targets = batch_general
+            logits = self(idx)
+            loss1 = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
+            loss1 = L2Wrap.apply(loss1, logits)
+            
+            bsz = len(batch_dpo)
+            loss2 = 0.0
+            for s in range(bsz):
+                chosen_input,chosen_output,length_chosen,chosen_ref_prob, reject_input,reject_output,length_reject,reject_ref_prob = batch_dpo[s]
+                chosen_logits = self(chosen_input)
+                reject_logits = self(reject_input)
+                loss_chosen = F.cross_entropy(chosen_logits.view(-1, chosen_logits.size(-1)), chosen_output.view(-1), reduction='none') # .squeeze()
+                chosen_prob = torch.sum(loss_chosen[-length_chosen:])
+                loss_reject = F.cross_entropy(reject_logits.view(-1, reject_logits.size(-1)), reject_output.view(-1), reduction='none') # .squeeze()
+                reject_prob = torch.sum(loss_reject[-length_reject:])
+                loss2 = loss2 - F.logsigmoid(args.beta * (chosen_prob - reject_prob - chosen_ref_prob + reject_ref_prob))
+            loss2 = loss2 / bsz
+
+            return args.dpo_general_corpus_ratio * loss1 + (1-args.dpo_general_corpus_ratio) * loss2
+        ################################################################################################################# dpo
+
+
+        
         if args.my_qa_mask != 1:
             idx, targets = batch
             logits = self(idx)
