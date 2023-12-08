@@ -436,7 +436,9 @@ class RWKV(pl.LightningModule):
     def forward(self, idx):
         args = self.args
         B, T = idx.size()
-        assert T <= args.ctx_len, "Cannot forward, model ctx_len is exhausted."
+
+        # Disable this error for long context DPO.
+        # assert T <= args.ctx_len, "Cannot forward, model ctx_len is exhausted."
 
         x = self.emb(idx)
         x_emb = x
