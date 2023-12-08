@@ -691,7 +691,7 @@ class RWKV(pl.LightningModule):
                 chosen_prob = torch.sum(loss_chosen[-length_chosen:])
                 loss_reject = F.cross_entropy(reject_logits.view(-1, reject_logits.size(-1)), reject_output.view(-1), reduction='none') # .squeeze()
                 reject_prob = torch.sum(loss_reject[-length_reject:])
-                loss2 = loss2 - F.logsigmoid(args.beta * (chosen_prob - reject_prob - chosen_ref_prob + reject_ref_prob))
+                loss2 = loss2 - F.logsigmoid(args.dpo_beta * (chosen_prob - reject_prob - chosen_ref_prob + reject_ref_prob))
             loss2 = loss2 / bsz
 
             return args.dpo_general_corpus_ratio * loss1 + (1-args.dpo_general_corpus_ratio) * loss2
