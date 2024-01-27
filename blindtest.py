@@ -1,11 +1,16 @@
+# Manually comparing 2 models. 
+# There are 40 questions in total.
+# Type 0 if the first answer is better, 1 if the second answer is better, -1 if these two answers are equally good (or bad). 
+# Score: +2 for better answer, +1 for equal, +0 for worse answer.
+
 import os, random
-from tkinter.messagebox import QUESTION
 os.environ["RWKV_JIT_ON"] = '1'
 os.environ["RWKV_CUDA_ON"] = '1' 
 
 from rwkv.model import RWKV
 from rwkv.utils import PIPELINE, PIPELINE_ARGS
 
+# Choose your 2 models here
 model = RWKV(model="../models_2/rwkv-5.pth", strategy='cuda fp16')
 modelbase = RWKV(model="../models_1/rwkv-5.pth", strategy='cuda fp16')
 # modelbase = RWKV(model="../../../RWKV-5-World-0.4B-v2-20231113-ctx4096.pth", strategy='cuda fp16')
