@@ -35,7 +35,7 @@ If you set `dpo_general_corpus_ratio` to 0, it will do only DPO.
 
 I uploaded a toy model:
 https://huggingface.co/ZhangRC/RWKV-5-World-DPO-Alpha
-This model is trained on approximately 10,000 DPO pairs for one epoch.
+This model is trained on approximately 10,000 DPO pairs for one epoch on solely English data.
 
 AlignBench results (in Chinese)
 | 模型名称 | 专业能力 | 中文理解 | 基本任务 | 数学计算 | 文本写作 | 综合问答 | 角色扮演 | 逻辑推理 | 中文推理 | 中文语言 | 总分 |
@@ -43,5 +43,6 @@ AlignBench results (in Chinese)
 | 原版 | 2.887 | 2.052 | 2.353 | 1.241 | 3.120 | 3.658 | 2.595 | 1.750 | 1.496 | 2.778 | 2.136 |
 | DPO  | 3.048 | 2.500 | 2.632 | 1.348 | 3.467 | 4.763 | 3.517 | 1.924 | 1.636 | 3.321 | 2.479 |
 
+These results show the model's cross-lingual transferablilty.
 
 
