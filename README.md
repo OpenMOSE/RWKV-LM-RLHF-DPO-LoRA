@@ -1,4 +1,4 @@
-# RWKV-LM-RLHF-DPO
+![image](https://github.com/Triang-jyed-driung/RWKV-LM-RLHF-DPO/assets/62597758/27e12a22-bb75-4287-9dd3-84ca3a3e3809)![image](https://github.com/Triang-jyed-driung/RWKV-LM-RLHF-DPO/assets/62597758/efd266aa-af81-4c1d-ad45-4cbb6455571c)# RWKV-LM-RLHF-DPO
 
 This project aims to implement Direct Preference Optimization for RWKV. 
 
@@ -30,3 +30,18 @@ Loss = (dpo\_general\_corpus\_ratio) * Loss\_general + (1 - dpo\_general\_corpus
 ```
 
 If you set `dpo_general_corpus_ratio` to 0, it will do only DPO.
+
+## Toy model
+
+I uploaded a toy model:
+https://huggingface.co/ZhangRC/RWKV-5-World-DPO-Alpha
+This model is trained on approximately 10,000 DPO pairs for one epoch.
+
+AlignBench results (in Chinese)
+| 模型名称 | 专业能力 | 中文理解 | 基本任务 | 数学计算 | 文本写作 | 综合问答 | 角色扮演 | 逻辑推理 | 中文推理 | 中文语言 | 总分 |
+|----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|
+| 原版 | 2.887 | 2.052 | 2.353 | 1.241 | 3.120 | 3.658 | 2.595 | 1.750 | 1.496 | 2.778 | 2.136 |
+| DPO  | 3.048 | 2.500 | 2.632 | 1.348 | 3.467 | 4.763 | 3.517 | 1.924 | 1.636 | 3.321 | 2.479 |
+
+
+
