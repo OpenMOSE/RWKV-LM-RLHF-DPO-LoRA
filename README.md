@@ -1,4 +1,4 @@
-![image](https://github.com/Triang-jyed-driung/RWKV-LM-RLHF-DPO/assets/62597758/27e12a22-bb75-4287-9dd3-84ca3a3e3809)![image](https://github.com/Triang-jyed-driung/RWKV-LM-RLHF-DPO/assets/62597758/efd266aa-af81-4c1d-ad45-4cbb6455571c)# RWKV-LM-RLHF-DPO
+# RWKV-LM-RLHF-DPO
 
 This project aims to implement Direct Preference Optimization for RWKV. 
 
