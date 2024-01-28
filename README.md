@@ -3,6 +3,7 @@
 This project aims to implement Direct Preference Optimization for RWKV. 
 
 20231201: Original idea
+20240128: First version
 
 # WARNING: Debugging, pre-release.
 
