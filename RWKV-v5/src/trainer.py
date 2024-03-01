@@ -139,16 +139,21 @@ class train_callback(pl.Callback):
             self.log("loss", trainer.my_epoch_loss, prog_bar=True, on_step=True)
             # self.log("s", real_step, prog_bar=True, on_step=True)
             if args.dpo:
-                try:
-                    self.log("pref_match_percentage", trainer.pref_match_percentage, prog_bar=True, on_step=True)
-                    self.log("loss_1", trainer.loss_1_general_or_sft, prog_bar=True, on_step=True)
-                    self.log("loss_2_dpo", trainer.loss_2_dpo, prog_bar=True, on_step=True)
-                except (NameError, AttributeError): pass
+                pass
+                # try:
+                #     self.log("pref_match_percentage", trainer.pref_match_percentage, prog_bar=True, on_step=True)
+                #     self.log("loss_1", trainer.loss_1_general_or_sft, prog_bar=True, on_step=True)
+                #     self.log("loss_2_dpo", trainer.loss_2_dpo, prog_bar=True, on_step=True)
+                # except (NameError, AttributeError): pass
             
             if len(args.wandb) > 0:
                 lll = {"loss": trainer.my_loss, "lr": trainer.my_lr, "wd": trainer.my_wd, "Gtokens": real_step * token_per_step / 1e9}
                 if kt_s > 0:
                     lll["kt/s"] = kt_s
+                if args.dpo:
+                    try:
+                        lll |= {"pref_percentage": trainer.pref_match_percentage, "loss_1": trainer.loss_1_general_or_sft, "loss_2_dpo": trainer.loss_2_dpo}
+                    except: pass
                 trainer.my_wandb.log(lll, step=int(real_step))
         if (trainer.is_global_zero) or ('deepspeed_stage_3' in args.strategy): # save pth
             if args.magic_prime > 0:
