@@ -3,21 +3,25 @@
 This project aims to implement Direct Preference Optimization for RWKV. 
 
 20231201: Original idea
+
 20240128: First version
+
+20240301: RWKV-6 merge & add logging (should hopefully work)
 
 # WARNING: Debugging, pre-release.
 
 ## Usages
-1. DPO dataset:
+1. Prepere DPO dataset:
    - Run `washingdpodata.ipynb`, which fetches data from https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized/
    - Modify the number of preference pairs you want to train on. Default to 1000.
    - It will generate 3 files, `trainset.save`, `validset.save` and `testset.save`. Note that validation and test sets are reserved for future use.
-2. General corpus dataset / SFT dataset:
-   - You might need a general corpus or SFT corpus to maintain general performance. It's required as a parameter, but you can point it to the `default_text_document` and set `--dpo_general_corpus_ratio 0`.
+2. Prepare general corpus dataset / SFT dataset:
+   - This repo allows you to perform SFT and DPO at the same time. You might want a general pretraining corpus or SFT corpus to maintain general performance.
+   - It's required as a parameter, but if you don't want that, you can point it to the `default_text_document` and set `--dpo_general_corpus_ratio 0`, It will only do DPO.
    - The size of the dataset might vary, but the larger the better.
    - Use `binidx` at https://github.com/Abel2076/json2binidx_tool, but if you don't have one, use `default_text_document` in this repo.
 3. Run `train.py`:
-   - Currently RWKV-5 is supported; I rebased this repository to support RWKV-6. It should (theoretically) work, but I can't verify by now.
+   - Currently RWKV-5 is supported; I rebased this repository to support RWKV-6. It should (theoretically) work, but I can't verify it by now.
    - Takes up too much memory (24GB) for a relatively small model (0.4B). TODO: use LoRA to save memory.
 
 My training command is provided as follows:
@@ -36,7 +40,7 @@ If you set `dpo_general_corpus_ratio` to 0, it will do only DPO.
 
 I uploaded a toy model:
 https://huggingface.co/ZhangRC/RWKV-5-World-DPO-Alpha
-This model is trained on approximately 10,000 DPO pairs for one epoch on solely English data (see https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized, run `washingdpodata.ipynb`, but the dataset formats may have changed a little), on a single RTX4090 GPU (parameters as above). VRAM usage was around 99%.
+This model is trained on approximately 10,000 DPO pairs for one epoch on solely English data (see https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized, run `washingdpodata.ipynb`, but the dataset formats may have changed a little since that), on a single RTX4090 GPU (parameters as above). VRAM usage was around 99%.
 
 AlignBench results (in Chinese)
 | 模型名称 | 专业能力 | 中文理解 | 基本任务 | 数学计算 | 文本写作 | 综合问答 | 角色扮演 | 逻辑推理 | 中文推理 | 中文语言 | 总分 |
@@ -45,5 +49,4 @@ AlignBench results (in Chinese)
 | DPO  | 3.048 | 2.500 | 2.632 | 1.348 | 3.467 | 4.763 | 3.517 | 1.924 | 1.636 | 3.321 | 2.479 |
 
 These results show the model's cross-lingual transferablilty.
-
 
