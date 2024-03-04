@@ -2,6 +2,9 @@
 
 This is experimental Experimental implementation of DPO LoRA for me
 
+
+still in development. I would be very happy if you could pull request
+
 I was able to train a v5.2 3b model with 32GB VRAM(r8, a16, DPO 1000Pairs)
 
 How to use test
