@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from pytorch_lightning.utilities import rank_zero_info, rank_zero_only
+from .model import LORA_CONFIG
 
 def my_save(args, trainer, dd, ff):
     if '14b-run1' in ff:
@@ -199,6 +200,16 @@ class train_callback(pl.Callback):
                             to_save_dict[k] = raw_dict[k]
                 else:
                     to_save_dict = pl_module.state_dict()
+                if args.lora:
+                    enable_time_finetune = 'time' in LORA_CONFIG["parts"]
+                    enable_ln_finetune = 'ln' in LORA_CONFIG["parts"]
+                    lora_dict = {}
+                    for name, state in to_save_dict.items():
+                        if ('.lora_' in name
+                                or (enable_time_finetune and '.time_' in name)
+                                or (enable_ln_finetune and '.ln' in name)):
+                            lora_dict[name] = state
+                    to_save_dict = lora_dict
                 try:
                     my_save(
                         args, trainer,
