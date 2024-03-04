@@ -1,7 +1,7 @@
 ########################################################################################################
 # The RWKV Language Model - https://github.com/BlinkDL/RWKV-LM
 ########################################################################################################
-
+import functools
 import os, math, gc, importlib
 import torch
 # torch._C._jit_set_profiling_executor(True)
@@ -11,11 +11,19 @@ from torch.nn import functional as F
 import pytorch_lightning as pl
 from pytorch_lightning.utilities import rank_zero_info, rank_zero_only
 from pytorch_lightning.strategies import DeepSpeedStrategy
+from torch.utils.checkpoint import checkpoint as torch_checkpoint
 if importlib.util.find_spec('deepspeed'):
     import deepspeed
     from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
 
 # from deepspeed.runtime.fp16.onebit.zoadam import ZeroOneAdam
+    
+LORA_CONFIG = {
+    "r": 0,
+    "alpha": 0,
+    "dropout": 0,
+    "parts": {"att", "ln", "time"},
+}    
 
 try:
     print('RWKV_MY_TESTING', os.environ["RWKV_MY_TESTING"])
@@ -31,6 +39,52 @@ MyFunction = __nop
 if os.environ["RWKV_JIT_ON"] == "1":
     MyModule = torch.jit.ScriptModule
     MyFunction = torch.jit.script_method
+
+########################################################################################################
+# LoRA
+########################################################################################################
+
+
+class LoraLinear(nn.Module):
+
+    def __init__(self, in_features: int, out_features: int, bias: bool):
+        super().__init__()
+
+        self.weight = nn.Parameter(torch.empty((out_features, in_features)))
+        assert bias == False, "Biased LoraLinear not supported"
+
+        r, alpha, dropout = LORA_CONFIG["r"], LORA_CONFIG[
+            "alpha"], LORA_CONFIG["dropout"]
+        self.lora_A = nn.Parameter(torch.empty(r, in_features))
+        self.lora_B = nn.Parameter(torch.empty(out_features, r))
+        self.lora_dropout = nn.Dropout(dropout)
+        self.scaling = alpha / r
+
+        nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+        nn.init.kaiming_uniform_(self.lora_A, a=math.sqrt(5))
+        nn.init.zeros_(self.lora_B)
+
+    def forward(self, x):
+        return (
+            F.linear(x, self.weight) + self.scaling *
+            F.linear(F.linear(self.lora_dropout(x), self.lora_A), self.lora_B))
+
+
+@functools.wraps(LoraLinear)
+def make_linear_att(*args, **kwargs):
+    if "att" in LORA_CONFIG["parts"] and LORA_CONFIG["r"] > 0:
+        return LoraLinear(*args, **kwargs)
+    else:
+        return nn.Linear(*args, **kwargs)
+
+
+@functools.wraps(LoraLinear)
+def make_linear_ffn(*args, **kwargs):
+    if "ffn" in LORA_CONFIG["parts"] and LORA_CONFIG["r"] > 0:
+        return LoraLinear(*args, **kwargs)
+    else:
+        return nn.Linear(*args, **kwargs)
+########################################################################################################
 
 
 ########################################################################################################
@@ -186,11 +240,18 @@ class RWKV_TimeMix_RWKV5(MyModule):
             self.time_faaaa = nn.Parameter(tmp.reshape(self.n_head, self.head_size))
 
         self.time_shift = nn.ZeroPad2d((0, 0, 1, -1))
-        self.receptance = nn.Linear(args.n_embd, args.dim_att, bias=False)
-        self.key = nn.Linear(args.n_embd, args.dim_att, bias=False)
 
-        self.value = nn.Linear(args.n_embd, args.dim_att, bias=False)
+        #self.receptance = nn.Linear(args.n_embd, args.dim_att, bias=False)
+        #self.key = nn.Linear(args.n_embd, args.dim_att, bias=False)
+        #self.value = nn.Linear(args.n_embd, args.dim_att, bias=False)
+        self.key = make_linear_att(args.n_embd, args.dim_att, bias=False)
+        self.value = make_linear_att(args.n_embd, args.dim_att, bias=False)
+        self.receptance = make_linear_att(args.n_embd, args.dim_att, bias=False)
+
+
         self.output = nn.Linear(args.dim_att, args.n_embd, bias=False)
+
+
         self.gate = nn.Linear(args.n_embd, args.dim_att, bias=False)
         self.ln_x = nn.GroupNorm(self.n_head, args.dim_att)
 
@@ -277,10 +338,14 @@ class RWKV_Tmix_x060(MyModule):
             self.time_faaaa = nn.Parameter(tmp.reshape(self.n_head, self.head_size))
 
         self.time_shift = nn.ZeroPad2d((0, 0, 1, -1))
-        self.receptance = nn.Linear(args.n_embd, args.dim_att, bias=False)
-        self.key = nn.Linear(args.n_embd, args.dim_att, bias=False)
 
-        self.value = nn.Linear(args.n_embd, args.dim_att, bias=False)
+        #self.receptance = nn.Linear(args.n_embd, args.dim_att, bias=False)
+        #self.key = nn.Linear(args.n_embd, args.dim_att, bias=False)
+        #self.value = nn.Linear(args.n_embd, args.dim_att, bias=False)
+        self.key = make_linear_att(args.n_embd, args.dim_att, bias=False)
+        self.value = make_linear_att(args.n_embd, args.dim_att, bias=False)
+        self.receptance = make_linear_att(args.n_embd, args.dim_att, bias=False)
+
         self.output = nn.Linear(args.dim_att, args.n_embd, bias=False)
         self.gate = nn.Linear(args.n_embd, args.dim_att, bias=False)
         self.ln_x = nn.GroupNorm(self.n_head, args.dim_att, eps=(1e-5)*(args.head_size_divisor**2))
@@ -347,9 +412,12 @@ class RWKV_ChannelMix(MyModule):
             self.time_mix_k = nn.Parameter(torch.pow(ddd, ratio_1_to_almost0))
             self.time_mix_r = nn.Parameter(torch.pow(ddd, ratio_1_to_almost0))
         
-        self.key = nn.Linear(args.n_embd, args.dim_ffn, bias=False)
-        self.receptance = nn.Linear(args.n_embd, args.n_embd, bias=False)
-        self.value = nn.Linear(args.dim_ffn, args.n_embd, bias=False)
+        #self.key = nn.Linear(args.n_embd, args.dim_ffn, bias=False)
+        #self.receptance = nn.Linear(args.n_embd, args.n_embd, bias=False)
+        #self.value = nn.Linear(args.dim_ffn, args.n_embd, bias=False)
+        self.key = make_linear_ffn(args.n_embd, args.dim_ffn, bias=False)
+        self.receptance = make_linear_ffn(args.n_embd, args.n_embd, bias=False)
+        self.value = make_linear_ffn(args.dim_ffn, args.n_embd, bias=False)
 
     @MyFunction
     def forward(self, x):
@@ -376,9 +444,12 @@ class RWKV_CMix_x060(MyModule):
             self.time_maa_k = nn.Parameter(1.0 - torch.pow(ddd, ratio_1_to_almost0))
             self.time_maa_r = nn.Parameter(1.0 - torch.pow(ddd, ratio_1_to_almost0))
 
-        self.key = nn.Linear(args.n_embd, args.dim_ffn, bias=False)
-        self.receptance = nn.Linear(args.n_embd, args.n_embd, bias=False)
-        self.value = nn.Linear(args.dim_ffn, args.n_embd, bias=False)
+        #self.key = nn.Linear(args.n_embd, args.dim_ffn, bias=False)
+        #self.receptance = nn.Linear(args.n_embd, args.n_embd, bias=False)
+        #self.value = nn.Linear(args.dim_ffn, args.n_embd, bias=False)
+        self.key = make_linear_ffn(args.n_embd, args.dim_ffn, bias=False)
+        self.receptance = make_linear_ffn(args.n_embd, args.n_embd, bias=False)
+        self.value = make_linear_ffn(args.dim_ffn, args.n_embd, bias=False)
 
     @MyFunction
     def forward(self, x):
@@ -640,13 +711,19 @@ class RWKV(pl.LightningModule):
         if args.tiny_att_dim > 0:
             for block in self.blocks:
                 if args.grad_cp == 1:
-                    x = deepspeed.checkpointing.checkpoint(block, x, x_emb)
+                    if args.lora:
+                        x = torch_checkpoint(block, x, x_emb, use_reentrant=False)
+                    else:
+                        x = deepspeed.checkpointing.checkpoint(block, x, x_emb)
                 else:
                     x = block(x, x_emb)
         else:
             for block in self.blocks:
                 if args.grad_cp == 1:
-                    x = deepspeed.checkpointing.checkpoint(block, x)
+                    if args.lora:
+                        x = torch_checkpoint(block, x, x_emb, use_reentrant=False)
+                    else:
+                        x = deepspeed.checkpointing.checkpoint(block, x)
                 else:
                     x = block(x)
 

@@ -79,6 +79,13 @@ if __name__ == "__main__":
     parser.add_argument("--dpo_beta", default=0.01, type=float)
     parser.add_argument("--dpo_general_corpus_ratio", default=0, type=float)
     # parser.add_argument("--dpo_eval_file", default="validset.save", type=str)
+
+    parser.add_argument("--lora", action="store_true")
+    parser.add_argument("--lora_load", default="", type=str)
+    parser.add_argument("--lora_r", default=8, type=int)
+    parser.add_argument("--lora_alpha", default=32, type=float)
+    parser.add_argument("--lora_dropout", default=0.01, type=float)
+    parser.add_argument("--lora_parts", default="att,ln,time", type=str)
     
     if pl.__version__[0]=='2':
         parser.add_argument("--accelerator", default="gpu", type=str)
@@ -255,8 +262,39 @@ if __name__ == "__main__":
     train_data = MyDataset(args)
     args.vocab_size = train_data.vocab_size
 
-    from src.model import RWKV
+    #from src.model import RWKV
+    from src.model import RWKV, LORA_CONFIG, LoraLinear
     model = RWKV(args)
+
+    Dummy = 1
+    if Dummy == 1:
+        if args.lora:
+            assert args.lora_r > 0, "LoRA should have its `r` > 0"
+            LORA_CONFIG["r"] = args.lora_r
+            LORA_CONFIG["alpha"] = args.lora_alpha
+            LORA_CONFIG["dropout"] = args.lora_dropout
+            LORA_CONFIG["parts"] = set(str(args.lora_parts).split(','))
+            enable_time_finetune = 'time' in LORA_CONFIG["parts"]
+            enable_ln_finetune = 'ln' in LORA_CONFIG["parts"]
+        model = RWKV(args)
+        # only train lora parameters
+        if args.lora:
+            model.requires_grad_(False)
+            for name, module in model.named_modules():
+                # have to check param name since it may have been wrapped by torchscript
+                if any(n.startswith("lora_") for n, _ in module.named_parameters()):
+                    print(f'  LoRA training module {name}')
+                    for pname, param in module.named_parameters():
+                        param.requires_grad = 'lora_' in pname
+                elif enable_ln_finetune and '.ln' in name:
+                    print(f'  LoRA additionally training module {name}')
+                    for param in module.parameters():
+                        param.requires_grad = True
+                elif enable_time_finetune and any(n.startswith("time") for n, _ in module.named_parameters()):
+                    for pname, param in module.named_parameters():
+                        if pname.startswith("time"):
+                            print(f'  LoRA additionally training parameter {pname}')
+                            param.requires_grad = True
 
     if len(args.load_model) == 0 or args.my_pile_stage == 1:  # shall we build the initial weights?
         init_weight_name = f"{args.proj_dir}/rwkv-init.pth"
@@ -288,7 +326,12 @@ if __name__ == "__main__":
         for k in model.state_dict():
             if k not in load_keys:
                 load_dict[k] = model.state_dict()[k]
-    model.load_state_dict(load_dict)
+    #model.load_state_dict(load_dict)
+    # If using LoRA, the LoRA keys might be missing in the original model
+    model.load_state_dict(load_dict,strict=(not args.lora))
+    if os.path.isfile(args.lora_load):
+        model.load_state_dict(torch.load(args.lora_load, map_location="cpu"),
+                              strict=False)
 
     if pl.__version__[0]=='2':
         trainer = Trainer(accelerator=args.accelerator,strategy=args.strategy,devices=args.devices,num_nodes=args.num_nodes,precision=args.precision,
