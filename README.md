@@ -2,10 +2,9 @@
 
 This is experimental Experimental implementation of DPO LoRA for me
 
-
 still in development. I would be very happy if you could pull request
 
-I was able to train a v5.2 3b model with 32GB VRAM(r8, a16, DPO 1000Pairs)
+I was able to train a v5.2 3b model with MI100 32GB VRAM(r8, a16, DPO 1000Pairs)
 
 How to use test
 
@@ -18,6 +17,8 @@ How to use test
    - run prepare_dpo_dataset.py
 3. Run Trainer(Sample Command for me)
    - Run Trainer
+4. Run `merge_lora.py`:
+   - python merge_lora.py 16 RWKV-5-World-3B-v2-20231113-ctx4096.pth models_2/rwkv-18.pth output.pth
    
 Trainer command:
  python train.py --load_model RWKV-5-World-3B-v2-20231113-ctx4096.pth --wandb test --proj_dir models_2 --ctx_len 4096 --epoch_count 4 --epoch_begin 0 --epoch_steps 2000 --data_file default_text_document --data_type binidx --vocab_size 65536 --epoch_save 1 --micro_bsz 1 --n_layer 32 --n_embd 2560 --pre_ffn 0 --head_qk 0 --lr_init 5e-6 --lr_final 1e-6 --warmup_steps 50 --beta1 0.9 --beta2 0.99 --adam_eps 1e-8 --accelerator gpu --devices 2 --precision bf16 --strategy deepspeed_stage_2_offload --grad_cp 0 --accumulate_grad_batches 20 --enable_progress_bar True --ds_bucket_mb 200 --my_testing r3r4 --dpo 1 --dpo_train_file trainset.save --dpo_general_corpus_ratio 0 --dpo_beta 0.02 --lora --lora_r 8 --lora_alpha 16 --lora_dropout 0.01 --lora_parts=att,ffn,time,ln
@@ -48,6 +49,8 @@ This project aims to implement Direct Preference Optimization for RWKV.
 3. Run `train.py`:
    - Currently RWKV-5 is supported; I rebased this repository to support RWKV-6. It should (theoretically) work, but I can't verify it by now.
    - Takes up too much memory (24GB) for a relatively small model (0.4B). TODO: use LoRA to save memory.
+
+
  
 My training command is provided as follows:
 ```
