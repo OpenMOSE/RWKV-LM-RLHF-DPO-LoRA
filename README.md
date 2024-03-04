@@ -14,6 +14,9 @@ How to use test
    - edit target rwkv model and target dataset filename in prepare_dpo_dataset.py
    - run prepare_dpo_dataset.py
 3. Run Trainer(Sample Command for me)
+   - Run Trainer
+   
+Trainer command:
 ``` python train.py --load_model RWKV-5-World-3B-v2-20231113-ctx4096.pth --wandb test --proj_dir models_2 --ctx_len 4096 --epoch_count 4 --epoch_begin 0 --epoch_steps 2000 --data_file default_text_document --data_type binidx --vocab_size 65536 --epoch_save 1 --micro_bsz 1 --n_layer 32 --n_embd 2560 --pre_ffn 0 --head_qk 0 --lr_init 5e-6 --lr_final 1e-6 --warmup_steps 50 --beta1 0.9 --beta2 0.99 --adam_eps 1e-8 --accelerator gpu --devices 2 --precision bf16 --strategy deepspeed_stage_2_offload --grad_cp 0 --accumulate_grad_batches 20 --enable_progress_bar True --ds_bucket_mb 200 --my_testing r3r4 --dpo 1 --dpo_train_file trainset.save --dpo_general_corpus_ratio 0 --dpo_beta 0.02 --lora --lora_r 8 --lora_alpha 16 --lora_dropout 0.01 --lora_parts=att,ffn,time,ln
 ```
 
