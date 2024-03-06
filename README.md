@@ -4,6 +4,24 @@ This is experimental Experimental implementation of DPO LoRA for me
 
 still in development. I would be very happy if you could pull request
 
+
+1. 2024.03.04 First Release LoRA Function
+   - Added LoRA Implementation on r,k,v linear layaer to lora 
+2. 2024.03.07 test optimized release for Training in 'experiment' folder
+   - Optimized dpo trainer for reduce vram usage
+   - Added dpo token limiter for reduce vram usage
+   - Deleted combined training for reduce vram usage
+   - if use this experiment trainer add configs below
+   - --dpo_max_corpus_len 400 --gpu_arch cuda(if rocm set rocm)
+   - it means dpo dataset is limited by dpo_max_corpus_len(ex. prompt 400,chosen 400,reject 400)
+   - if OoM in training, you can decrease this value for avoiding OoM
+   - VRAM Usage(1000pairs) r8 a16 on MI100 x 2
+   - v5.2 7b (dpo_len=400) @ around 30GB
+   - v5.2 3b (dpo_len=400) @ around 18GB
+   - v6.0 3b (dpo_len=400) @ around 28GB
+    
+
+
 I was able to train a v5.2 3b model with MI100 32GB VRAM(r8, a16, DPO 1000Pairs)
 
 How to use test
