@@ -19,6 +19,7 @@ still in development. I would be very happy if you could pull request
    - v5.2 7b (dpo_len=400) @ around 30GB
    - v5.2 3b (dpo_len=400) @ around 18GB
    - v6.0 3b (dpo_len=400) @ around 28GB
+3. 20240322 Added Emb Layer Training
     
 
 
