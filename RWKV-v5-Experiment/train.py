@@ -302,6 +302,10 @@ if __name__ == "__main__":
                         if pname.startswith("time"):
                             print(f'  LoRA additionally training parameter {pname}')
                             param.requires_grad = True
+                for pname, param in module.named_parameters():
+                	if pname.startswith("emb"):
+                		param.requires_grad = True
+                		print("embedding train enabled")
 
     if len(args.load_model) == 0 or args.my_pile_stage == 1:  # shall we build the initial weights?
         init_weight_name = f"{args.proj_dir}/rwkv-init.pth"
